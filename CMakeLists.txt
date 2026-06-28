@@ -29,13 +29,12 @@ juce_add_binary_data(CutOffBinaryData
         Assets/LineageLogo.svg
 )
 
-# Add Source Files
-target_sources(CutOff PRIVATE
-    Source/PluginProcessor.cpp
-    Source/PluginProcessor.h
-    Source/PluginEditor.cpp
-    Source/PluginEditor.h
+# Add Source Files (auto-detected)
+file(GLOB_RECURSE CutOffSources CONFIGURE_DEPENDS
+    Source/*.cpp
+    Source/*.h
 )
+target_sources(CutOff PRIVATE ${CutOffSources})
 
 # Link Libraries
 target_link_libraries(CutOff PRIVATE
