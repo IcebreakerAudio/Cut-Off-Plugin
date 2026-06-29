@@ -24,28 +24,30 @@ void CutOffAudioProcessor::changeProgramName (int index, const juce::String& new
 
 void CutOffAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) 
 {
-    // Tell the DSP modules about the host's sample rate and buffer size
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = getTotalNumOutputChannels();
 
-    // Initialize High-Pass Filter
     hpf.prepare(spec);
     hpf.setType(juce::dsp::StateVariableTPTFilterType::highpass);
 
-    // Initialize Low-Pass Filter
     lpf.prepare(spec);
     lpf.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
 
-    // Initialize Compressor
-    compressor.prepare(spec);
-    compressor.setRatio(4.0f); // Setting a standard 4:1 compression ratio
+    constexpr auto smoothingTimeSeconds = 0.03;
+    hpfSmoothedFreq.reset(sampleRate, smoothingTimeSeconds);
+    hpfSmoothedFreq.setCurrentAndTargetValue(apvts.getRawParameterValue("HPF")->load());
+    lpfSmoothedFreq.reset(sampleRate, smoothingTimeSeconds);
+    lpfSmoothedFreq.setCurrentAndTargetValue(apvts.getRawParameterValue("LPF")->load());
 
-    // Initialize Gain
+    compressor.prepare(spec);
+    compressor.setRatio(4.0f);
+    threshSmoothedValue.reset(sampleRate, smoothingTimeSeconds);
+    threshSmoothedValue.setCurrentAndTargetValue(apvts.getRawParameterValue("THRESHOLD")->load());
+
     outputGain.prepare(spec);
 
-    // Initialize spectrum fifo
     const auto fifoSize = std::max(samplesPerBlock * 2, juce::roundToInt(sampleRate / 30.0));
     fifo.setTotalSize(fifoSize);
     fifoData.resize(fifoSize, 0.0f);
@@ -77,30 +79,33 @@ void CutOffAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     auto thresh = apvts.getRawParameterValue("THRESHOLD")->load();
     auto gain = apvts.getRawParameterValue("GAIN")->load();
 
-    hpf.setCutoffFrequency(hpfFreq);
-    lpf.setCutoffFrequency(lpfFreq);
-    
+    hpfSmoothedFreq.setTargetValue(hpfFreq);
+    lpfSmoothedFreq.setTargetValue(lpfFreq);
+
     compressor.setAttack(atk);
     compressor.setRelease(dec);
-    compressor.setThreshold(thresh);
-    
+    threshSmoothedValue.setTargetValue(thresh);
+
     outputGain.setGainDecibels(gain);
 
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::ProcessContextReplacing<float> context(block);
 
-    // ToDo: smoothing of cutoff values
-    for (int ch = 0; ch < block.getNumChannels(); ++ch)
+    for (int i = 0; i < block.getNumSamples(); ++i)
     {
-        auto* data = block.getChannelPointer(ch);
-        for (int i = 0; i < block.getNumSamples(); ++i)
+        hpf.setCutoffFrequency(hpfSmoothedFreq.getNextValue());
+        lpf.setCutoffFrequency(lpfSmoothedFreq.getNextValue());
+        compressor.setThreshold(threshSmoothedValue.getNextValue());
+
+        for (int ch = 0; ch < block.getNumChannels(); ++ch)
         {
+            auto* data = block.getChannelPointer(ch);
             data[i] = hpf.processSample(ch, data[i]);
             data[i] = lpf.processSample(ch, data[i]);
+            data[i] = compressor.processSample(ch, data[i]);
         }
     }
 
-    compressor.process(context);
     outputGain.process(context);
 
     pushBufferToFifo(buffer);

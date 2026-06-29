@@ -34,7 +34,6 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
-    // reads from fifo into a vector and returns size of data read
     int getDataFromFifo(std::vector<float>& output, const int indexOffset);
     bool getScopeData(std::vector<float>& output);
 
@@ -47,7 +46,9 @@ private:
     SpectralAnalyser spectralAnalyser;
 
     juce::dsp::StateVariableTPTFilter<float> hpf, lpf;
+    juce::LinearSmoothedValue<float> hpfSmoothedFreq, lpfSmoothedFreq;
     juce::dsp::Compressor<float> compressor;
+    juce::LinearSmoothedValue<float> threshSmoothedValue;
     juce::dsp::Gain<float> outputGain;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CutOffAudioProcessor)
