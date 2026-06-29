@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
+#include "UI/SpectralDisplay.h"
 
 class CutOffAudioProcessor  : public juce::AudioProcessor
 {
@@ -32,26 +33,20 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
-    enum
-    {
-        fftOrder  = 11,
-        fftSize   = 1 << fftOrder,
-        scopeSize = 512
-    };
 
-    void pushNextSampleIntoFifo (float sample) noexcept;
-
-    float fifo[fftSize];
-    float fftData[2 * fftSize];
-    int fifoIndex = 0;
-    bool nextFFTBlockReady = false;
+    // reads from fifo into a vector and returns size of data read
+    int getDataFromFifo(std::vector<float>& output, const int indexOffset);
+    bool getScopeData(std::vector<float>& output);
 
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    // --- ADD THESE DSP OBJECTS ---
-    juce::dsp::StateVariableTPTFilter<float> hpf;
-    juce::dsp::StateVariableTPTFilter<float> lpf;
+    juce::AbstractFifo fifo {1};
+    void pushBufferToFifo (const juce::AudioBuffer<float>& buffer);
+    std::vector<float> fifoData;
+    SpectralAnalyser spectralAnalyser;
+
+    juce::dsp::StateVariableTPTFilter<float> hpf, lpf;
     juce::dsp::Compressor<float> compressor;
     juce::dsp::Gain<float> outputGain;
 

@@ -2,6 +2,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "UI/CutoffLookAndFeel.h"
 #include "PluginProcessor.h"
+#include "UI/SpectralDisplay.h"
 
 class CutOffAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::Timer
 {
@@ -14,14 +15,11 @@ public:
 
 private:
     void timerCallback() override;
-    void drawNextFrameOfSpectrum();
-
-    juce::dsp::FFT forwardFFT;
-    juce::dsp::WindowingFunction<float> window;
-    float scopeData[CutOffAudioProcessor::scopeSize];
 
     CutOffAudioProcessor& audioProcessor;
     GlowLookAndFeel glowLookAndFeel;
+
+    SpectralDisplay spectralDisplay;
     
     std::unique_ptr<juce::Drawable> cutOffLogo;
     std::unique_ptr<juce::Drawable> lineageLogo;

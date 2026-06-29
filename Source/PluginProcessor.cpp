@@ -5,7 +5,9 @@ CutOffAudioProcessor::CutOffAudioProcessor()
      : AudioProcessor (BusesProperties()
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-       apvts(*this, nullptr, "Parameters", createParameterLayout()) {}
+       apvts(*this, nullptr, "Parameters", createParameterLayout()),
+       spectralAnalyser(*this)
+{}
 
 CutOffAudioProcessor::~CutOffAudioProcessor() {}
 
@@ -42,7 +44,15 @@ void CutOffAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
 
     // Initialize Gain
     outputGain.prepare(spec);
+
+    // Initialize spectrum fifo
+    const auto fifoSize = std::max(samplesPerBlock * 2, juce::roundToInt(sampleRate / 30.0));
+    fifo.setTotalSize(fifoSize);
+    fifoData.resize(fifoSize, 0.0f);
+    fifo.reset();
+    spectralAnalyser.prepare(sampleRate, fifoSize);
 }
+
 void CutOffAudioProcessor::releaseResources() {}
 
 bool CutOffAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
@@ -57,11 +67,9 @@ void CutOffAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Clear any unused channels
     for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // 1. Grab the live numbers from your UI knobs
     auto hpfFreq = apvts.getRawParameterValue("HPF")->load();
     auto lpfFreq = apvts.getRawParameterValue("LPF")->load();
     auto atk = apvts.getRawParameterValue("ATTACK")->load();
@@ -69,43 +77,33 @@ void CutOffAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     auto thresh = apvts.getRawParameterValue("THRESHOLD")->load();
     auto gain = apvts.getRawParameterValue("GAIN")->load();
 
-    // 2. Feed those numbers into the DSP engines
     hpf.setCutoffFrequency(hpfFreq);
     lpf.setCutoffFrequency(lpfFreq);
     
     compressor.setAttack(atk);
-    compressor.setRelease(dec); // Using Decay knob to control compressor release
+    compressor.setRelease(dec);
     compressor.setThreshold(thresh);
     
     outputGain.setGainDecibels(gain);
 
-    // 3. Process the Filters (Sample by Sample)
     juce::dsp::AudioBlock<float> block(buffer);
+    juce::dsp::ProcessContextReplacing<float> context(block);
+
+    // ToDo: smoothing of cutoff values
     for (int ch = 0; ch < block.getNumChannels(); ++ch)
     {
         auto* data = block.getChannelPointer(ch);
         for (int i = 0; i < block.getNumSamples(); ++i)
         {
-            // Run the audio through the HPF, then the LPF
             data[i] = hpf.processSample(ch, data[i]);
             data[i] = lpf.processSample(ch, data[i]);
         }
     }
 
-    // 4. Process the Dynamics (Compressor & Gain)
-    juce::dsp::ProcessContextReplacing<float> context(block);
     compressor.process(context);
     outputGain.process(context);
 
-    // --- Send output to the Spectrum Visualizer ---
-    if (block.getNumChannels() > 0)
-    {
-        auto* channelData = block.getChannelPointer(0); // Use Left channel
-        for (int i = 0; i < block.getNumSamples(); ++i)
-        {
-            pushNextSampleIntoFifo(channelData[i]);
-        }
-    }
+    pushBufferToFifo(buffer);
 }
 
 
@@ -136,20 +134,82 @@ juce::AudioProcessorValueTreeState::ParameterLayout CutOffAudioProcessor::create
     return { params.begin(), params.end() };
 }
 
-void CutOffAudioProcessor::pushNextSampleIntoFifo (float sample) noexcept
+void CutOffAudioProcessor::pushBufferToFifo (const juce::AudioBuffer<float>& buffer)
 {
-    // When the fifo contains enough data, copy it to the fftData array to be analyzed
-    if (fifoIndex == fftSize)
+    const auto numSamples = buffer.getNumSamples();
+    const auto numChannels = buffer.getNumChannels();
+    const auto sumFactor = 1.0f / float(numChannels);
+
+    auto fifoWriter = fifo.write(numSamples);
+    auto readIndex = 0;
+
+    if(fifoWriter.blockSize1 > 0)
     {
-        if (! nextFFTBlockReady)
+        for(auto i = 0; i < fifoWriter.blockSize1; ++i)
         {
-            juce::zeromem (fftData, sizeof (fftData));
-            memcpy (fftData, fifo, sizeof (fifo));
-            nextFFTBlockReady = true;
+            const auto writeIdx = fifoWriter.startIndex1 + i;
+            auto sample = 0.0f;
+            for(auto c = 0; c < numChannels; ++c)
+            {
+                sample += buffer.getSample(c, readIndex) * sumFactor;
+            }
+            fifoData[writeIdx] = sample;
+            readIndex++;
         }
-        fifoIndex = 0;
     }
-    fifo[fifoIndex++] = sample;
+
+    if(fifoWriter.blockSize2 > 0)
+    {
+        for(auto i = 0; i < fifoWriter.blockSize2; ++i)
+        {
+            const auto writeIdx = fifoWriter.startIndex2 + i;
+            auto sample = 0.0f;
+            for(auto c = 0; c < numChannels; ++c)
+            {
+                sample += buffer.getSample(c, readIndex) * sumFactor;
+            }
+            fifoData[writeIdx] = sample;
+            readIndex++;
+        }
+    }
+}
+
+int CutOffAudioProcessor::getDataFromFifo(std::vector<float>& output, const int indexOffset)
+{
+    auto fifoReader = fifo.read(output.size() - indexOffset);
+    auto writeIndex = indexOffset;
+
+    if(fifoReader.blockSize1 > 0)
+    {
+        for(auto i = 0; i < fifoReader.blockSize1; ++i)
+        {
+            const auto readIdx = fifoReader.startIndex1 + i;
+            output[writeIndex] = fifoData[readIdx];
+            writeIndex++;
+        }
+    }
+
+    if(fifoReader.blockSize2 > 0)
+    {
+        for(auto i = 0; i < fifoReader.blockSize2; ++i)
+        {
+            const auto readIdx = fifoReader.startIndex2 + i;
+            output[writeIndex] = fifoData[readIdx];
+            writeIndex++;
+        }
+    }
+
+    return fifoReader.blockSize1 + fifoReader.blockSize2;
+}
+
+bool CutOffAudioProcessor::getScopeData(std::vector<float>& output)
+{
+    auto newFrame = spectralAnalyser.isNewFrameAvailable();
+    if(newFrame)
+    {
+        spectralAnalyser.getCurrentFrame(output);
+    }
+    return newFrame;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new CutOffAudioProcessor(); }
