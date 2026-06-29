@@ -73,7 +73,7 @@ void CutOffAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     auto hpfFreq = apvts.getRawParameterValue("HPF")->load();
     auto lpfFreq = apvts.getRawParameterValue("LPF")->load();
     auto atk = apvts.getRawParameterValue("ATTACK")->load();
-    auto dec = apvts.getRawParameterValue("DECAY")->load();
+    auto dec = apvts.getRawParameterValue("RELEASE")->load();
     auto thresh = apvts.getRawParameterValue("THRESHOLD")->load();
     auto gain = apvts.getRawParameterValue("GAIN")->load();
 
@@ -133,7 +133,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout CutOffAudioProcessor::create
     params.push_back(std::make_unique<juce::AudioParameterFloat>("HPF", "HPF", juce::NormalisableRange<float>(20.0f, 2000.0f, 1.0f, 0.3f), 20.0f, hzAttributes));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("LPF", "LPF", juce::NormalisableRange<float>(200.0f, 20000.0f, 1.0f, 0.3f), 20000.0f, hzAttributes));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("ATTACK", "Attack", juce::NormalisableRange<float>(0.1f, 100.0f, 0.1f, 0.5f), 10.0f, msAttributes));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>("DECAY", "Decay", juce::NormalisableRange<float>(1.0f, 1000.0f, 1.0f, 0.5f), 100.0f, msAttributes));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("RELEASE", "Release", juce::NormalisableRange<float>(1.0f, 1000.0f, 1.0f, 0.5f), 100.0f, msAttributes));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("THRESHOLD", "Threshold", juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f), -20.0f, dbAttributes));
     params.push_back(std::make_unique<juce::AudioParameterFloat>("GAIN", "Gain", juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f, dbAttributes));
     return { params.begin(), params.end() };

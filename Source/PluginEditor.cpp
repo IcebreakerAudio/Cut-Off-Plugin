@@ -28,14 +28,14 @@ CutOffAudioProcessorEditor::CutOffAudioProcessorEditor (CutOffAudioProcessor& p)
     setupSlider(hpfSlider, hpfLabel, "HPF", " Hz");
     setupSlider(lpfSlider, lpfLabel, "LPF", " Hz");
     setupSlider(attackSlider, attackLabel, "ATTACK", " ms");
-    setupSlider(decaySlider, decayLabel, "DECAY", " ms");
+    setupSlider(decaySlider, decayLabel, "RELEASE", " ms");
     setupSlider(thresholdSlider, thresholdLabel, "THRESHOLD", " dB");
     setupSlider(gainSlider, gainLabel, "GAIN", " dB");
 
     hpfAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "HPF", hpfSlider);
     lpfAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "LPF", lpfSlider);
     atkAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "ATTACK", attackSlider);
-    decAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "DECAY", decaySlider);
+    decAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "RELEASE", decaySlider);
     threshAttach = std::make_unique<SliderAttachment>(audioProcessor.apvts, "THRESHOLD", thresholdSlider);
     gainAttach   = std::make_unique<SliderAttachment>(audioProcessor.apvts, "GAIN", gainSlider);
 
