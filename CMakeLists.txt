@@ -17,10 +17,10 @@ juce_add_plugin(CutOff
     PLUGIN_CODE "CutO"
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "Cut-Off"
-    NEEDS_JUCE_HEADER TRUE  # <--- THIS IS THE FIX!
+    NEEDS_JUCE_HEADER TRUE
 )
 
-# Embed BOTH Logos into the BinaryData C++ class
+# Embed BinaryData C++ class
 juce_add_binary_data(CutOffBinaryData
     HEADER_NAME "BinaryData.h"
     NAMESPACE "BinaryData"
@@ -46,5 +46,4 @@ target_link_libraries(CutOff PRIVATE
 
 target_compile_features(CutOff PRIVATE cxx_std_17)
 
-# --- ADD THIS LINE AT THE VERY BOTTOM ---
 target_compile_definitions(CutOff PUBLIC JUCE_VST3_CAN_REPLACE_VST2=0)
