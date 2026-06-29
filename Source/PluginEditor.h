@@ -17,7 +17,7 @@ private:
     void timerCallback() override;
 
     CutOffAudioProcessor& audioProcessor;
-    GlowLookAndFeel glowLookAndFeel;
+    CutoffLookAndFeel lookAndFeel;
 
     SpectralDisplay spectralDisplay;
     
@@ -30,6 +30,6 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::unique_ptr<SliderAttachment> hpfAttach, lpfAttach, atkAttach, decAttach, threshAttach, gainAttach;
 
-    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& name);
+    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, const juce::String& suffix);
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CutOffAudioProcessorEditor)
 };

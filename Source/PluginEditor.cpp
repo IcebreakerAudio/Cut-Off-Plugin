@@ -1,16 +1,15 @@
 #include "PluginEditor.h"
 #include "BinaryData.h"
 
-void CutOffAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& name)
+void CutOffAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, const juce::String& suffix)
 {
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
-    slider.setLookAndFeel(&glowLookAndFeel);
+    slider.setTextValueSuffix(suffix);
     addAndMakeVisible(slider);
 
     label.setText(name, juce::dontSendNotification);
     label.setFont(juce::Font(14.0f, juce::Font::bold));
-    label.setColour(juce::Label::textColourId, juce::Colours::white);
     label.setJustificationType(juce::Justification::centred);
     label.attachToComponent(&slider, false);
     addAndMakeVisible(label);
@@ -20,25 +19,19 @@ CutOffAudioProcessorEditor::CutOffAudioProcessorEditor (CutOffAudioProcessor& p)
     : AudioProcessorEditor (&p),
       audioProcessor (p)
 {
-    // Safely load both SVG Logos from BinaryData using the exact filenames
+    
     cutOffLogo  = juce::Drawable::createFromImageData(BinaryData::CutOffLogo_svg,  BinaryData::CutOffLogo_svgSize);
     lineageLogo = juce::Drawable::createFromImageData(BinaryData::LineageLogo_svg, BinaryData::LineageLogo_svgSize);
     addAndMakeVisible(cutOffLogo.get());
     addAndMakeVisible(lineageLogo.get());
 
-    // ==============================================================================
-    // 1. SETUP UI STYLES (Applies the neon vector glow to ALL knobs)
-    // ==============================================================================
-    setupSlider(hpfSlider, hpfLabel, "HPF");
-    setupSlider(lpfSlider, lpfLabel, "LPF");
-    setupSlider(attackSlider, attackLabel, "ATTACK");
-    setupSlider(decaySlider, decayLabel, "DECAY");
-    setupSlider(thresholdSlider, thresholdLabel, "THRESHOLD");
-    setupSlider(gainSlider, gainLabel, "GAIN");
+    setupSlider(hpfSlider, hpfLabel, "HPF", " Hz");
+    setupSlider(lpfSlider, lpfLabel, "LPF", " Hz");
+    setupSlider(attackSlider, attackLabel, "ATTACK", " ms");
+    setupSlider(decaySlider, decayLabel, "DECAY", " ms");
+    setupSlider(thresholdSlider, thresholdLabel, "THRESHOLD", " dB");
+    setupSlider(gainSlider, gainLabel, "GAIN", " dB");
 
-    // ==============================================================================
-    // 2. ATTACH KNOBS TO DSP (Ensures turning the knobs actually filters the audio)
-    // ==============================================================================
     hpfAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "HPF", hpfSlider);
     lpfAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "LPF", lpfSlider);
     atkAttach    = std::make_unique<SliderAttachment>(audioProcessor.apvts, "ATTACK", attackSlider);
@@ -48,6 +41,7 @@ CutOffAudioProcessorEditor::CutOffAudioProcessorEditor (CutOffAudioProcessor& p)
 
     addAndMakeVisible (spectralDisplay);
     
+    setLookAndFeel(&lookAndFeel);
     setSize (700, 450);
 
     startTimerHz(60);
@@ -55,12 +49,7 @@ CutOffAudioProcessorEditor::CutOffAudioProcessorEditor (CutOffAudioProcessor& p)
 
 CutOffAudioProcessorEditor::~CutOffAudioProcessorEditor()
 {
-    hpfSlider.setLookAndFeel(nullptr);
-    lpfSlider.setLookAndFeel(nullptr);
-    attackSlider.setLookAndFeel(nullptr);
-    decaySlider.setLookAndFeel(nullptr);
-    thresholdSlider.setLookAndFeel(nullptr);
-    gainSlider.setLookAndFeel(nullptr);
+    setLookAndFeel(nullptr);
 }
 
 void CutOffAudioProcessorEditor::timerCallback()

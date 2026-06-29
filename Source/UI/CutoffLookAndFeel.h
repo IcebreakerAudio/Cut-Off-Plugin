@@ -1,10 +1,11 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class GlowLookAndFeel : public juce::LookAndFeel_V4
+class CutoffLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    GlowLookAndFeel() {
+    CutoffLookAndFeel() {
+        setColour(juce::Label::textColourId, juce::Colours::white);
         setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
         setColour(juce::Slider::textBoxTextColourId, juce::Colours::white);
     }
