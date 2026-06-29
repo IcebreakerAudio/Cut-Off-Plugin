@@ -15,9 +15,10 @@ juce_add_plugin(CutOff
     COMPANY_NAME "Lineage Audio Labs"
     PLUGIN_MANUFACTURER_CODE "LinA"
     PLUGIN_CODE "CutO"
-    FORMATS VST3 AU Standalone
+    FORMATS VST3 AU Standalone LV2
     PRODUCT_NAME "Cut-Off"
-    NEEDS_JUCE_HEADER TRUE
+    BUNDLE_ID "com.LineageAudioLabs.CutOff"
+    LV2URI "urn:lineageaudiolabs:cutoff"
 )
 
 # Embed BinaryData C++ class
