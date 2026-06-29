@@ -60,7 +60,6 @@ void CutOffAudioProcessorEditor::timerCallback()
 
 void CutOffAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // 1. Deeply dark charcoal background
     g.fillAll (juce::Colour(0xff0D0D0D));
 }
 
@@ -68,14 +67,12 @@ void CutOffAudioProcessorEditor::resized()
 {
     const int knobSize = 100;
 
-    // Center the Cut-Off Logo in the top area
     if (cutOffLogo != nullptr)
     {
         juce::Rectangle<float> cutOffBounds(0, 10, getWidth(), 80);
         cutOffLogo->setTransformToFit(cutOffBounds, juce::RectanglePlacement::centred);
     }
 
-    // Right-align the Lineage Audio Labs Logo
     if (lineageLogo != nullptr)
     {
         juce::Rectangle<float> lineageBounds(getWidth() - 140, 15, 120, 45);

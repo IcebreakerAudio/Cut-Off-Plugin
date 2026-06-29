@@ -2,7 +2,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_dsp/juce_dsp.h>
 
-class CutOffAudioProcessor; // forward declare to avoid pulling PluginProcessor.h in here
+class CutOffAudioProcessor;
 
 class SpectralAnalyser : public juce::Thread
 {
